@@ -201,6 +201,7 @@ namespace Zametek.ViewModel.ProjectPlan
                 .ToProperty(this, main => main.AutoCompile);
 
             m_CoreViewModel.UseBusinessDays = true;
+            m_CoreViewModel.ShowDates = true;
             m_CoreViewModel.IsProjectUpdated = false;
             m_CoreViewModel.AutoCompile = true;
             m_CoreViewModel.ViewEarnedValueProjections = false;

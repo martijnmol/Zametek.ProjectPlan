@@ -34,7 +34,7 @@ namespace Zametek.ViewModel.ProjectPlan
         private static readonly double s_SvgConsolasLabelWidthCorrectionFactor = s_SvgNodeLabelWidth / 14;
         private static readonly double s_SvgConsolasLabelHeightCorrectionFactor = 0.7;
 
-        private static readonly Color s_NodeFillColor = Colors.LightGray;
+        private static readonly Color s_NodeFillColor = Color.Parse("#EEEEEE");//Colors.LightGray;
         private static readonly Color s_NodeBorderColor = Colors.Black;
 
         private const double c_PxPerInch = 96;
@@ -67,7 +67,7 @@ namespace Zametek.ViewModel.ProjectPlan
             return new DiagramNodeModel
             {
                 Id = eventModel.Id,
-                Height = 26.0,
+                Height = 62.0,
                 Width = 62.0,
                 FillColorHexCode = ColorHelper.ColorToHtmlHexCode(s_NodeFillColor),
                 BorderColorHexCode = ColorHelper.ColorToHtmlHexCode(s_NodeBorderColor),
@@ -108,7 +108,7 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             else
             {
-                labelText.Append(@$"{activityModel.Id}({activityModel.Duration})");
+                labelText.AppendFormat($@"{activityModel.Name} [{activityModel.Duration}]");
                 if (!activityModel.IsCritical())
                 {
                     labelText.Append(@$" [{activityModel.FreeSlack}|{activityModel.TotalSlack}]");
@@ -147,7 +147,7 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             else
             {
-                labelText.AppendFormat($@"{activityModel.Id} ({activityModel.Duration})");
+                labelText.AppendFormat($@"{activityModel.Name} [{activityModel.Duration}]");
                 if (!activityModel.IsCritical())
                 {
                     labelText.AppendLine();
@@ -332,7 +332,8 @@ namespace Zametek.ViewModel.ProjectPlan
 
             drawingGraph.LayoutAlgorithmSettings.EdgeRoutingSettings.UseObstacleRectangles = true;
             drawingGraph.LayoutAlgorithmSettings.EdgeRoutingSettings.EdgeRoutingMode = Microsoft.Msagl.Core.Routing.EdgeRoutingMode.SugiyamaSplines;
-
+            drawingGraph.LayoutAlgorithmSettings.NodeSeparation = 60;
+            
             drawingGraph.Attr.LayerDirection = Microsoft.Msagl.Drawing.LayerDirection.LR;
 
             // Draw the graph.

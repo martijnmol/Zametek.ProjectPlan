@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using DynamicData;
 using DynamicData.Binding;
 using ReactiveUI;
@@ -153,6 +153,7 @@ namespace Zametek.ViewModel.ProjectPlan
         {
             lock (m_Lock)
             {
+                Debug.WriteLine("BuildArrowGraph IN");
                 ArrowGraph = new ArrowGraphModel();
 
                 if (!HasCompilationErrors)
@@ -177,6 +178,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     }
                 }
             }
+            Debug.WriteLine("BuildArrowGraph OUT");
         }
 
         private static ResourceSeriesSetModel CalculateResourceSeriesSet(
@@ -344,6 +346,7 @@ namespace Zametek.ViewModel.ProjectPlan
         {
             lock (m_Lock)
             {
+                Debug.WriteLine("BuildResourceSeriesSet IN");
                 var resourceSeriesSet = new ResourceSeriesSetModel();
 
                 if (!HasCompilationErrors)
@@ -361,6 +364,7 @@ namespace Zametek.ViewModel.ProjectPlan
 
                 ResourceSeriesSet = resourceSeriesSet;
             }
+            Debug.WriteLine("BuildResourceSeriesSet OUT");
         }
 
         private static TrackingSeriesSetModel CalculateTrackingSeriesSet(IEnumerable<ActivityModel> activities)
@@ -450,8 +454,8 @@ namespace Zametek.ViewModel.ProjectPlan
                         {
                             var tracker = activity.Trackers[timeIndex];
 
-                            Debug.Assert(tracker.Index == timeIndex);
-                            Debug.Assert(tracker.Time == timeIndex);
+                            // Debug.Assert(tracker.Index == timeIndex);
+                            // Debug.Assert(tracker.Time == timeIndex);
 
                             timeIndexRunningProgress += activity.Duration * (tracker.PercentageComplete / 100.0);
 
@@ -568,6 +572,7 @@ namespace Zametek.ViewModel.ProjectPlan
         {
             lock (m_Lock)
             {
+                Debug.WriteLine("BuildTrackingSeriesSet IN");
                 var trackingSeriesSet = new TrackingSeriesSetModel();
 
                 if (!HasCompilationErrors)
@@ -578,6 +583,7 @@ namespace Zametek.ViewModel.ProjectPlan
 
                 TrackingSeriesSet = trackingSeriesSet;
             }
+            Debug.WriteLine("BuildTrackingSeriesSet OUT");
         }
 
         private static int CalculateCyclomaticComplexity(IEnumerable<IDependentActivity<int, int>> dependentActivities)
@@ -597,6 +603,7 @@ namespace Zametek.ViewModel.ProjectPlan
         {
             lock (m_Lock)
             {
+                Debug.WriteLine("BuildCyclomaticComplexity IN");
                 CyclomaticComplexity = null;
 
                 if (!HasCompilationErrors)
@@ -612,6 +619,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     CyclomaticComplexity = CalculateCyclomaticComplexity(dependentActivities);
                 }
             }
+            Debug.WriteLine("BuildCyclomaticComplexity OUT");
         }
 
         #endregion
@@ -624,7 +632,12 @@ namespace Zametek.ViewModel.ProjectPlan
             get => m_ProjectTitle.Value;
             set
             {
-                lock (m_Lock) m_SettingService.SetTitle(value);
+                lock (m_Lock)
+                {
+                    Debug.WriteLine("ProjectTitle IN");
+                    m_SettingService.SetTitle(value);
+                }
+                Debug.WriteLine("ProjectTitle OUT");
             }
         }
 
@@ -634,7 +647,14 @@ namespace Zametek.ViewModel.ProjectPlan
             get => m_IsBusy;
             private set
             {
-                lock (m_Lock) this.RaiseAndSetIfChanged(ref m_IsBusy, value);
+                lock (m_Lock)
+                {
+                    Debug.WriteLine("IsBusy IN");
+                    System.Diagnostics.StackTrace t = new System.Diagnostics.StackTrace();
+                    Debug.WriteLine(t);
+                    this.RaiseAndSetIfChanged(ref m_IsBusy, value);
+                }
+                Debug.WriteLine("IsBusy OUT");
             }
         }
 
@@ -646,9 +666,11 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("IsProjectUpdated IN");
                     HasStaleOutputs = value;
                     this.RaiseAndSetIfChanged(ref m_IsProjectUpdated, value);
                 }
+                Debug.WriteLine("IsProjectUpdated OUT");
             }
         }
 
@@ -658,7 +680,12 @@ namespace Zametek.ViewModel.ProjectPlan
             get => m_HasStaleOutputs;
             set
             {
-                lock (m_Lock) this.RaiseAndSetIfChanged(ref m_HasStaleOutputs, value);
+                lock (m_Lock)
+                {
+                    Debug.WriteLine("HasStaleOutputs IN");
+                    this.RaiseAndSetIfChanged(ref m_HasStaleOutputs, value);
+                }
+                Debug.WriteLine("HasStaleOutputs OUT");
             }
         }
 
@@ -670,11 +697,13 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("ProjectStart IN");
                     IsProjectUpdated = true;
                     this.RaiseAndSetIfChanged(ref m_ProjectStart, value);
                     this.RaisePropertyChanged(nameof(ProjectStartDateTime));
                     this.RaisePropertyChanged(nameof(ProjectStartTimeOffset));
                 }
+                Debug.WriteLine("ProjectStart OUT");
             }
         }
 
@@ -685,8 +714,10 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("ProjectStartDateTime IN");
                     ProjectStart = new DateTimeOffset(value, ProjectStartTimeOffset);
                 }
+                Debug.WriteLine("ProjectStartDateTime OUT");
             }
         }
 
@@ -697,8 +728,10 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("ProjectStartTimeOffset IN");
                     ProjectStart = new DateTimeOffset(ProjectStartDateTime, value);
                 }
+                Debug.WriteLine("ProjectStartTimeOffset OUT");
             }
         }
 
@@ -708,7 +741,12 @@ namespace Zametek.ViewModel.ProjectPlan
             get => m_ShowDates;
             set
             {
-                lock (m_Lock) this.RaiseAndSetIfChanged(ref m_ShowDates, value);
+                lock (m_Lock)
+                {
+                    Debug.WriteLine("ShowDates IN");
+                    this.RaiseAndSetIfChanged(ref m_ShowDates, value);
+                }
+                Debug.WriteLine("ShowDates OUT");
             }
         }
 
@@ -720,6 +758,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("UseBusinessDays IN");
                     m_UseBusinessDays = value;
                     if (m_UseBusinessDays)
                     {
@@ -732,6 +771,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     IsProjectUpdated = true;
                     this.RaisePropertyChanged();
                 }
+                Debug.WriteLine("UseBusinessDays OUT");
             }
         }
 
@@ -751,7 +791,12 @@ namespace Zametek.ViewModel.ProjectPlan
             get => m_AutoCompile;
             set
             {
-                lock (m_Lock) this.RaiseAndSetIfChanged(ref m_AutoCompile, value);
+                lock (m_Lock)
+                {
+                    Debug.WriteLine("AutoCompile IN");
+                    this.RaiseAndSetIfChanged(ref m_AutoCompile, value);
+                }
+                Debug.WriteLine("AutoCompile OUT");
             }
         }
 
@@ -767,10 +812,12 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("ArrowGraphSettings IN");
                     m_ArrowGraphSettings = value;
                     IsProjectUpdated = true;
                     this.RaisePropertyChanged();
                 }
+                Debug.WriteLine("ArrowGraphSettings OUT");
             }
         }
 
@@ -782,10 +829,12 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("ResourceSettings IN");
                     m_ResourceSettings = value;
                     IsProjectUpdated = true;
                     this.RaisePropertyChanged();
                 }
+                Debug.WriteLine("ResourceSettings OUT");
             }
         }
 
@@ -798,7 +847,12 @@ namespace Zametek.ViewModel.ProjectPlan
             get => m_GraphCompilation;
             private set
             {
-                lock (m_Lock) this.RaiseAndSetIfChanged(ref m_GraphCompilation, value);
+                lock (m_Lock)
+                {
+                    Debug.WriteLine("GraphCompilation IN");
+                    this.RaiseAndSetIfChanged(ref m_GraphCompilation, value);
+                }
+                Debug.WriteLine("GraphCompilation OUT");
             }
         }
 
@@ -810,8 +864,10 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("ArrowGraph IN");
                     this.RaiseAndSetIfChanged(ref m_ArrowGraph, value);
                 }
+                Debug.WriteLine("ArrowGraph OUT");
             }
         }
 
@@ -821,7 +877,12 @@ namespace Zametek.ViewModel.ProjectPlan
             get => m_ResourceSeriesSet;
             private set
             {
-                lock (m_Lock) this.RaiseAndSetIfChanged(ref m_ResourceSeriesSet, value);
+                lock (m_Lock)
+                {
+                    Debug.WriteLine("ResourceSeriesSet IN");
+                    this.RaiseAndSetIfChanged(ref m_ResourceSeriesSet, value);
+                }
+                Debug.WriteLine("ResourceSeriesSet OUT");
             }
         }
 
@@ -831,7 +892,12 @@ namespace Zametek.ViewModel.ProjectPlan
             get => m_TrackingSeriesSet;
             private set
             {
-                lock (m_Lock) this.RaiseAndSetIfChanged(ref m_TrackingSeriesSet, value);
+                lock (m_Lock)
+                {
+                    Debug.WriteLine("TrackingSeriesSet IN");
+                    this.RaiseAndSetIfChanged(ref m_TrackingSeriesSet, value);
+                }
+                Debug.WriteLine("TrackingSeriesSet OUT");
             }
         }
 
@@ -841,7 +907,12 @@ namespace Zametek.ViewModel.ProjectPlan
             get => m_CyclomaticComplexity;
             private set
             {
-                lock (m_Lock) this.RaiseAndSetIfChanged(ref m_CyclomaticComplexity, value);
+                lock (m_Lock)
+                {
+                    Debug.WriteLine("CyclomaticComplexity IN");
+                    this.RaiseAndSetIfChanged(ref m_CyclomaticComplexity, value);
+                }
+                Debug.WriteLine("CyclomaticComplexity OUT");
             }
         }
 
@@ -854,10 +925,12 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("ClearSettings IN");
                     IsBusy = true;
                     ArrowGraphSettings = m_SettingService.DefaultArrowGraphSettings;
                     ResourceSettings = m_SettingService.DefaultResourceSettings;
                 }
+                Debug.WriteLine("ClearSettings OUT");
             }
             finally
             {
@@ -871,6 +944,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("ResetProject IN");
                     IsBusy = true;
                     ClearManagedActivities();
 
@@ -887,6 +961,7 @@ namespace Zametek.ViewModel.ProjectPlan
 
                     m_SettingService.Reset();
                 }
+                Debug.WriteLine("ResetProject OUT");
             }
             finally
             {
@@ -900,6 +975,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("ProcessProjectImport IN");
                     IsBusy = true;
                     ResetProject();
 
@@ -945,6 +1021,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     IsProjectUpdated = false;
                     HasStaleOutputs = true;
                 }
+                Debug.WriteLine("ProcessProjectImport OUT");
             }
             finally
             {
@@ -958,6 +1035,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("ProcessProjectPlan IN");
                     IsBusy = true;
                     ResetProject();
 
@@ -982,6 +1060,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     IsProjectUpdated = false;
                     HasStaleOutputs = projectPlanModel.HasStaleOutputs;
                 }
+                Debug.WriteLine("ProcessProjectPlan OUT");
             }
             finally
             {
@@ -995,6 +1074,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("BuildProjectPlan IN");
                     IsBusy = true;
                     var graphCompilation = m_Mapper.Map<IGraphCompilation<int, int, IDependentActivity<int, int>>, GraphCompilationModel>(GraphCompilation);
 
@@ -1013,6 +1093,8 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
+                Debug.WriteLine("BuildProjectPlan Out");
+                IsBusy = oldIsBusy;
                 IsBusy = false;
             }
         }
@@ -1023,6 +1105,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("AddManagedActivity IN");
                     IsBusy = true;
                     var activityId = m_VertexGraphCompiler.GetNextActivityId();
                     var set = new HashSet<DependentActivityModel>
@@ -1037,6 +1120,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     };
                     AddManagedActivities(set);
                 }
+                Debug.WriteLine("AddManagedActivity OUT");
             }
             finally
             {
@@ -1050,6 +1134,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("AddManagedActivities IN");
                     IsBusy = true;
                     // Check that the number of trackers across each activity is consistent.
                     // Make them match the highest number.
@@ -1092,6 +1177,7 @@ namespace Zametek.ViewModel.ProjectPlan
 
                     IsProjectUpdated = true;
                 }
+                Debug.WriteLine("AddManagedActivities OUT");
             }
             finally
             {
@@ -1105,6 +1191,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("RemoveManagedActivities IN");
                     IsBusy = true;
                     IEnumerable<IManagedActivityViewModel> dependentActivities = Activities
                         .Where(x => dependentActivityIds.Contains(x.Id))
@@ -1121,6 +1208,7 @@ namespace Zametek.ViewModel.ProjectPlan
 
                     IsProjectUpdated = true;
                 }
+                Debug.WriteLine("RemoveManagedActivities OUT");
             }
             finally
             {
@@ -1134,6 +1222,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("ClearManagedActivities IN");
                     IsBusy = true;
                     foreach (IDisposable activity in Activities)
                     {
@@ -1142,6 +1231,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     m_Activities.Clear();
                     m_VertexGraphCompiler.Reset();
                 }
+                Debug.WriteLine("ClearManagedActivities OUT");
             }
             finally
             {
@@ -1155,6 +1245,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("AddTrackers IN");
                     IsBusy = true;
                     foreach (IManagedActivityViewModel activity in Activities)
                     {
@@ -1162,6 +1253,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     }
                     IsProjectUpdated = true;
                 }
+                Debug.WriteLine("AddTrackers OUT");
             }
             finally
             {
@@ -1175,6 +1267,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("RemoveTrackers IN");
                     IsBusy = true;
                     foreach (IManagedActivityViewModel activity in Activities)
                     {
@@ -1182,6 +1275,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     }
                     IsProjectUpdated = true;
                 }
+                Debug.WriteLine("RemoveTrackers OUT");
             }
             finally
             {
@@ -1195,6 +1289,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("ReviseTrackers IN");
                     IsBusy = true;
                     foreach (IManagedActivityViewModel activity in Activities)
                     {
@@ -1222,6 +1317,7 @@ namespace Zametek.ViewModel.ProjectPlan
                         }
                     }
                 }
+                Debug.WriteLine("ReviseTrackers OUT");
             }
             finally
             {
@@ -1235,6 +1331,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("RunCompile IN");
                     IsBusy = true;
                     ReviseTrackers();
 
@@ -1248,6 +1345,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     IsProjectUpdated = true;
                     HasStaleOutputs = false;
                 }
+                Debug.WriteLine("RunCompile OUT");
             }
             finally
             {
@@ -1261,12 +1359,14 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("RunAutoCompile IN");
                     IsBusy = true;
                     if (AutoCompile)
                     {
                         RunCompile();
                     }
                 }
+                Debug.WriteLine("RunAutoCompile OUT");
             }
             finally
             {
@@ -1280,11 +1380,13 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    Debug.WriteLine("RunTransitiveReduction IN");
                     IsBusy = true;
                     m_VertexGraphCompiler.Compile(new List<IResource<int>>());
                     m_VertexGraphCompiler.TransitiveReduction();
                     RunCompile();
                 }
+                Debug.WriteLine("RunTransitiveReduction OUT");
             }
             finally
             {

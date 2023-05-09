@@ -218,6 +218,7 @@ namespace Zametek.ViewModel.ProjectPlan
 
                 if (data is not null)
                 {
+                    File.Delete(filename);
                     using var stream = File.OpenWrite(filename);
                     await stream.WriteAsync(data);
                 }

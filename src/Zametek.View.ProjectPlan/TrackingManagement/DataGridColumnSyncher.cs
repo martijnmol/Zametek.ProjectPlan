@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Data;
@@ -131,10 +131,14 @@ namespace Zametek.View.ProjectPlan
 
             Type? columnType = GetColumnType(dg);
             IDateTimeCalculator? dateTimeCalculator = GetDateTimeCalculator(dg);
-            DateTimeOffset? projectStart = GetProjectStart(dg);
+            
             bool showDates = GetShowDates(dg);
 
             IEnumerable? oldItemsSource = GetItemsSource(dg);
+            IEnumerable<IManagedActivityViewModel> sources = (IEnumerable<IManagedActivityViewModel>) oldItemsSource;
+            var first = sources?.ToList().FirstOrDefault();
+            showDates = showDates || first?.ShowDates == true;
+            DateTimeOffset? projectStart = GetProjectStart(dg) ?? first?.ProjectStart;
             SetItemsSource(dg, null);
 
             if (columnType is not null)
@@ -217,7 +221,7 @@ namespace Zametek.View.ProjectPlan
 
 
         public static readonly AttachedProperty<bool> ShowDatesProperty = AvaloniaProperty
-            .RegisterAttached<DataGridColumnSyncher, DataGrid, bool>("ShowDates", default, false, BindingMode.OneWay);
+            .RegisterAttached<DataGridColumnSyncher, DataGrid, bool>("ShowDates", default, true, BindingMode.OneWay);
 
         public static void SetShowDates(AvaloniaObject element, bool value)
         {
