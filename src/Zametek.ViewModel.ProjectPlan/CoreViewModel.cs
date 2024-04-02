@@ -1094,7 +1094,6 @@ namespace Zametek.ViewModel.ProjectPlan
             finally
             {
                 Debug.WriteLine("BuildProjectPlan Out");
-                IsBusy = oldIsBusy;
                 IsBusy = false;
             }
         }

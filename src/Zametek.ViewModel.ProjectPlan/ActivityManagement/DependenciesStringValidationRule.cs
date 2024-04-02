@@ -68,7 +68,7 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 return (Enumerable.Empty<int>(), null);
             }
-            string stripped = StripWhitespace(value).TrimEnd(',');
+            string stripped = StripWhitespace(value);
             if (!s_StrippedMatch?.IsMatch(stripped) ?? false)
             {
                 return (null, Resource.ProjectPlan.Labels.Label_InvalidFormat);

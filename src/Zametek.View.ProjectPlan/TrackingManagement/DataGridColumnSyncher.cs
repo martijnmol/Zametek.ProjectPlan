@@ -5,6 +5,8 @@ using Avalonia.Data;
 using ReactiveUI;
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reactive.Linq;
 using Zametek.Contract.ProjectPlan;
 using Zametek.Utility;
