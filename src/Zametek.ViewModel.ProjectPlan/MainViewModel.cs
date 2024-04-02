@@ -24,10 +24,10 @@ namespace Zametek.ViewModel.ProjectPlan
                 new FileFilter
                 {
                     Name = Resource.ProjectPlan.Filters.Filter_ProjectPlanFileType,
-                    Extensions = new List<string>
-                    {
-                        Resource.ProjectPlan.Filters.Filter_ProjectPlanFileExtension
-                    }
+                    Patterns =
+                    [
+                        Resource.ProjectPlan.Filters.Filter_ProjectPlanFilePattern
+                    ]
                 }
             };
 
@@ -37,19 +37,19 @@ namespace Zametek.ViewModel.ProjectPlan
                 new FileFilter
                 {
                     Name = Resource.ProjectPlan.Filters.Filter_MicrosoftProjectFileType,
-                    Extensions = new List<string>
-                    {
-                        Resource.ProjectPlan.Filters.Filter_MicrosoftProjectMppFileExtension,
-                        Resource.ProjectPlan.Filters.Filter_MicrosoftProjectXmlFileExtension
-                    }
+                    Patterns =
+                    [
+                        Resource.ProjectPlan.Filters.Filter_MicrosoftProjectMppFilePattern,
+                        //Resource.ProjectPlan.Filters.Filter_MicrosoftProjectXmlFilePattern
+                    ]
                 },
                 new FileFilter
                 {
                     Name = Resource.ProjectPlan.Filters.Filter_ProjectXlsxFileType,
-                    Extensions = new List<string>
-                    {
-                        Resource.ProjectPlan.Filters.Filter_ProjectXlsxFileExtension
-                    }
+                    Patterns =
+                    [
+                        Resource.ProjectPlan.Filters.Filter_ProjectXlsxFilePattern
+                    ]
                 }
             };
 
@@ -59,10 +59,10 @@ namespace Zametek.ViewModel.ProjectPlan
                 new FileFilter
                 {
                     Name = Resource.ProjectPlan.Filters.Filter_ExcelFileType,
-                    Extensions = new List<string>
-                    {
-                        Resource.ProjectPlan.Filters.Filter_ExcelXlsxFileExtension
-                    }
+                    Patterns =
+                    [
+                        Resource.ProjectPlan.Filters.Filter_ExcelXlsxFilePattern
+                    ]
                 }
             };
 
@@ -179,6 +179,14 @@ namespace Zametek.ViewModel.ProjectPlan
             m_ProjectStartDateTime = this
                 .WhenAnyValue(main => main.m_CoreViewModel.ProjectStartDateTime)
                 .ToProperty(this, main => main.ProjectStartDateTime);
+
+            m_HasStaleOutputs = this
+                .WhenAnyValue(main => main.m_CoreViewModel.HasStaleOutputs)
+                .ToProperty(this, main => main.HasStaleOutputs);
+
+            m_HasCompilationErrors = this
+                .WhenAnyValue(main => main.m_CoreViewModel.HasCompilationErrors)
+                .ToProperty(this, main => main.HasCompilationErrors);
 
             m_ShowDates = this
                 .WhenAnyValue(main => main.m_CoreViewModel.ShowDates)
@@ -425,6 +433,12 @@ namespace Zametek.ViewModel.ProjectPlan
             }
         }
 
+        private readonly ObservableAsPropertyHelper<bool> m_HasStaleOutputs;
+        public bool HasStaleOutputs => m_HasStaleOutputs.Value;
+
+        private readonly ObservableAsPropertyHelper<bool> m_HasCompilationErrors;
+        public bool HasCompilationErrors => m_HasCompilationErrors.Value;
+
         private readonly ObservableAsPropertyHelper<bool> m_ShowDates;
         public bool ShowDates
         {
@@ -526,7 +540,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     }
                 }
                 string directory = m_SettingService.ProjectDirectory;
-                string? filename = await m_DialogService.ShowOpenFileDialogAsync(string.Empty, directory, s_ProjectPlanFileFilters);
+                string? filename = await m_DialogService.ShowOpenFileDialogAsync(directory, s_ProjectPlanFileFilters);
                 await OpenProjectPlanFileInternalAsync(filename);
             }
             catch (Exception ex)
@@ -628,7 +642,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     }
                 }
                 string directory = m_SettingService.ProjectDirectory;
-                string? filename = await m_DialogService.ShowOpenFileDialogAsync(string.Empty, directory, s_ImportFileFilters);
+                string? filename = await m_DialogService.ShowOpenFileDialogAsync(directory, s_ImportFileFilters);
 
                 if (!string.IsNullOrWhiteSpace(filename))
                 {

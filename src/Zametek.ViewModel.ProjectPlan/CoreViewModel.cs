@@ -55,7 +55,7 @@ namespace Zametek.ViewModel.ProjectPlan
             m_HasStaleOutputs = false;
             m_ProjectStart = new DateTimeOffset(DateTime.Today);
             m_ResourceSettings = new ResourceSettingsModel();
-            m_Activities = new ObservableCollection<IManagedActivityViewModel>();
+            m_Activities = [];
             m_ReadOnlyActivities = new ReadOnlyObservableCollection<IManagedActivityViewModel>(m_Activities);
             m_ArrowGraphSettings = m_SettingService.DefaultArrowGraphSettings;
             m_ResourceSettings = m_SettingService.DefaultResourceSettings;
@@ -83,8 +83,8 @@ namespace Zametek.ViewModel.ProjectPlan
 
             m_Duration = this
                 .WhenAnyValue(
-                    core => core.GraphCompilation, core => core.HasCompilationErrors,
-                    (compilation, hasCompilationErrors) => hasCompilationErrors ? (int?)null : m_VertexGraphCompiler.Duration)
+                    core => core.HasCompilationErrors,
+                    hasCompilationErrors => hasCompilationErrors ? (int?)null : m_VertexGraphCompiler.Duration)
                 .ToProperty(this, core => core.Duration);
 
             m_AreActivitiesUncompiledSub = m_ReadOnlyActivities
@@ -94,14 +94,21 @@ namespace Zametek.ViewModel.ProjectPlan
                 .ObserveOn(RxApp.TaskpoolScheduler)
                 .Subscribe(changeSet =>
                 {
-                    if (!IsBusy && changeSet.Replaced > 0) // Replaced counts the individually updated items.
+                    if (!IsBusy && changeSet.TotalChanges > 0)
                     {
-                        RunAutoCompile();
+                        lock (m_Lock)
+                        {
+                            if (!IsBusy && changeSet.TotalChanges > 0) // Replaced only counts the individually updated items.
+                            {
+                                RunAutoCompile();
+                            }
+                        }
                     }
                 });
 
             m_CompileOnSettingsUpdateSub = this
                 .WhenAnyValue(
+                    core => core.ProjectStart,
                     core => core.ResourceSettings,
                     core => core.ArrowGraphSettings,
                     core => core.UseBusinessDays)
@@ -110,7 +117,13 @@ namespace Zametek.ViewModel.ProjectPlan
                 {
                     if (!IsBusy)
                     {
-                        RunAutoCompile();
+                        lock (m_Lock)
+                        {
+                            if (!IsBusy)
+                            {
+                                RunAutoCompile();
+                            }
+                        }
                     }
                 });
 
@@ -121,8 +134,8 @@ namespace Zametek.ViewModel.ProjectPlan
 
             m_BuildResourceSeriesSetSub = this
                 .WhenAnyValue(
-                    core => core.GraphCompilation,
-                    core => core.ResourceSettings)
+                    core => core.GraphCompilation)//,
+                                                  //core => core.ResourceSettings)
                 .ObserveOn(RxApp.TaskpoolScheduler)
                 .Subscribe(_ => BuildResourceSeriesSet());
 
@@ -158,13 +171,8 @@ namespace Zametek.ViewModel.ProjectPlan
                         }
 
                         arrowGraphCompiler.Compile();
-                        Graph<int, IDependentActivity<int, int>, IEvent<int>>? arrowGraph = arrowGraphCompiler.ToGraph();
-
-                        if (arrowGraph is null)
-                        {
-                            throw new InvalidOperationException(Resource.ProjectPlan.Messages.Message_CannotBuildArrowGraph);
-                        }
-
+                        Graph<int, IDependentActivity<int, int>, IEvent<int>>? arrowGraph =
+                            arrowGraphCompiler.ToGraph() ?? throw new InvalidOperationException(Resource.ProjectPlan.Messages.Message_CannotBuildArrowGraph);
                         ArrowGraph = m_Mapper.Map<Graph<int, IDependentActivity<int, int>, IEvent<int>>, ArrowGraphModel>(arrowGraph);
                     }
                 }
@@ -183,13 +191,13 @@ namespace Zametek.ViewModel.ProjectPlan
 
             if (resourceSchedules.Any())
             {
-                IDictionary<int, ColorFormatModel> colorFormatLookup = resources.ToDictionary(x => x.Id, x => x.ColorFormat);
+                Dictionary<int, ColorFormatModel> colorFormatLookup = resources.ToDictionary(x => x.Id, x => x.ColorFormat);
                 int finishTime = resourceSchedules.Select(x => x.FinishTime).DefaultIfEmpty().Max();
                 int spareResourceCount = 1;
 
                 // Scheduled resource series.
                 // These are the series that apply to scheduled activities (whether allocated to named or unnamed resources).
-                IList<ResourceSeriesModel> scheduledSeriesSet = new List<ResourceSeriesModel>();
+                var scheduledSeriesSet = new List<ResourceSeriesModel>();
 
                 foreach (ResourceScheduleModel resourceSchedule in resourceSchedules)
                 {
@@ -365,42 +373,42 @@ namespace Zametek.ViewModel.ProjectPlan
                 .ToList();
 
             // Plan.
-            List<TrackingPointModel> planPointSeries = new()
-            {
+            List<TrackingPointModel> planPointSeries =
+            [
                 // Starting point.
                 new TrackingPointModel()
-            };
+            ];
 
             // Plan Projection.
-            List<TrackingPointModel> planProjectionPointSeries = new()
-            {
+            List<TrackingPointModel> planProjectionPointSeries =
+            [
                 // Starting point.
                 new TrackingPointModel()
-            };
+            ];
 
             // Progress.
-            List<TrackingPointModel> progressPointSeries = new()
-            {
+            List<TrackingPointModel> progressPointSeries =
+            [
                 new TrackingPointModel()
-            };
+            ];
 
             // Progress Projection.
-            List<TrackingPointModel> progressProjectionPointSeries = new()
-            {
+            List<TrackingPointModel> progressProjectionPointSeries =
+            [
                 new TrackingPointModel()
-            };
+            ];
 
             // Effort.
-            List<TrackingPointModel> effortPointSeries = new()
-            {
+            List<TrackingPointModel> effortPointSeries =
+            [
                 new TrackingPointModel()
-            };
+            ];
 
             // Effort Projection.
-            List<TrackingPointModel> effortProjectionPointSeries = new()
-            {
+            List<TrackingPointModel> effortProjectionPointSeries =
+            [
                 new TrackingPointModel()
-            };
+            ];
 
             if (orderedActivities.Any())
             {
@@ -576,7 +584,7 @@ namespace Zametek.ViewModel.ProjectPlan
         {
             ArgumentNullException.ThrowIfNull(dependentActivities);
             var vertexGraphCompiler = new VertexGraphCompiler<int, int, IDependentActivity<int, int>>();
-            foreach (DependentActivity<int, int> dependentActivity in dependentActivities)
+            foreach (var dependentActivity in dependentActivities.Cast<DependentActivity<int, int>>())
             {
                 dependentActivity.ResourceDependencies.Clear();
                 vertexGraphCompiler.AddActivity(dependentActivity);
@@ -662,10 +670,10 @@ namespace Zametek.ViewModel.ProjectPlan
             {
                 lock (m_Lock)
                 {
+                    IsProjectUpdated = true;
                     this.RaiseAndSetIfChanged(ref m_ProjectStart, value);
                     this.RaisePropertyChanged(nameof(ProjectStartDateTime));
                     this.RaisePropertyChanged(nameof(ProjectStartTimeOffset));
-                    IsProjectUpdated = true;
                 }
             }
         }
@@ -842,30 +850,28 @@ namespace Zametek.ViewModel.ProjectPlan
 
         public void ClearSettings()
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     ArrowGraphSettings = m_SettingService.DefaultArrowGraphSettings;
                     ResourceSettings = m_SettingService.DefaultResourceSettings;
                 }
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void ResetProject()
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     ClearManagedActivities();
 
                     ClearSettings();
@@ -884,18 +890,17 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void ProcessProjectImport(ProjectImportModel projectImportModel)
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     ResetProject();
 
                     // Project Start Date.
@@ -905,7 +910,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     ResourceSettingsModel resourceSettings = m_SettingService.DefaultResourceSettings.CloneObject();
                     resourceSettings = resourceSettings with { DefaultUnitCost = projectImportModel.DefaultUnitCost };
 
-                    if (projectImportModel.Resources.Any())
+                    if (projectImportModel.Resources.Count != 0)
                     {
                         resourceSettings.Resources.Clear();
 
@@ -920,7 +925,7 @@ namespace Zametek.ViewModel.ProjectPlan
                     // Arrow graph settings.
                     ArrowGraphSettingsModel arrowGraphSettings = m_SettingService.DefaultArrowGraphSettings.CloneObject();
 
-                    if (projectImportModel.ActivitySeverities.Any())
+                    if (projectImportModel.ActivitySeverities.Count != 0)
                     {
                         arrowGraphSettings.ActivitySeverities.Clear();
 
@@ -943,18 +948,17 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void ProcessProjectPlan(ProjectPlanModel projectPlanModel)
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     ResetProject();
 
                     // Project Start Date.
@@ -981,18 +985,17 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public ProjectPlanModel BuildProjectPlan()
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     var graphCompilation = m_Mapper.Map<IGraphCompilation<int, int, IDependentActivity<int, int>>, GraphCompilationModel>(GraphCompilation);
 
                     return new ProjectPlanModel
@@ -1010,22 +1013,21 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void AddManagedActivity()
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     var activityId = m_VertexGraphCompiler.GetNextActivityId();
                     var set = new HashSet<DependentActivityModel>
                     {
-                        new DependentActivityModel
+                        new()
                         {
                             Activity = new ActivityModel
                             {
@@ -1038,18 +1040,17 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void AddManagedActivities(IEnumerable<DependentActivityModel> dependentActivityModels)
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     // Check that the number of trackers across each activity is consistent.
                     // Make them match the highest number.
                     int maxCurrentTrackers = Activities
@@ -1094,18 +1095,17 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void RemoveManagedActivities(IEnumerable<int> dependentActivityIds)
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     IEnumerable<IManagedActivityViewModel> dependentActivities = Activities
                         .Where(x => dependentActivityIds.Contains(x.Id))
                         .ToList();
@@ -1124,18 +1124,17 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void ClearManagedActivities()
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     foreach (IDisposable activity in Activities)
                     {
                         activity.Dispose();
@@ -1146,18 +1145,17 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void AddTrackers()
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     foreach (IManagedActivityViewModel activity in Activities)
                     {
                         activity.AddTracker();
@@ -1167,18 +1165,17 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void RemoveTrackers()
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     foreach (IManagedActivityViewModel activity in Activities)
                     {
                         activity.RemoveTracker();
@@ -1188,18 +1185,17 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void ReviseTrackers()
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     foreach (IManagedActivityViewModel activity in Activities)
                     {
                         int runningPercentageCompleted = 0;
@@ -1229,18 +1225,17 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void RunCompile()
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     ReviseTrackers();
 
                     var availableResources = new List<IResource<int>>();
@@ -1256,18 +1251,17 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void RunAutoCompile()
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     if (AutoCompile)
                     {
                         RunCompile();
@@ -1276,18 +1270,17 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 
         public void RunTransitiveReduction()
         {
-            bool oldIsBusy = IsBusy;
             try
             {
-                IsBusy = true;
                 lock (m_Lock)
                 {
+                    IsBusy = true;
                     m_VertexGraphCompiler.Compile(new List<IResource<int>>());
                     m_VertexGraphCompiler.TransitiveReduction();
                     RunCompile();
@@ -1295,7 +1288,7 @@ namespace Zametek.ViewModel.ProjectPlan
             }
             finally
             {
-                IsBusy = oldIsBusy;
+                IsBusy = false;
             }
         }
 

@@ -1,9 +1,10 @@
 ﻿using AutoMapper;
 using Avalonia.Controls;
-using MessageBox.Avalonia;
-using MessageBox.Avalonia.BaseWindows.Base;
-using MessageBox.Avalonia.DTO;
-using MessageBox.Avalonia.Enums;
+using Avalonia.Platform.Storage;
+using MsBox.Avalonia.Base;
+using MsBox.Avalonia.Dto;
+using MsBox.Avalonia.Enums;
+using OxyPlot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,8 +34,8 @@ namespace Zametek.View.ProjectPlan
         private async Task<ButtonResult> ShowMessageBoxAsync(MessageBoxStandardParams standardParams)
         {
             standardParams.WindowIcon = m_Parent!.Icon;
-            IMsBoxWindow<ButtonResult>? msg = MessageBoxManager.GetMessageBoxStandardWindow(standardParams);
-            return await msg.ShowDialog(m_Parent);
+            IMsBox<ButtonResult>? msg = MsBox.Avalonia.MessageBoxManager.GetMessageBoxStandard(standardParams);
+            return await msg.ShowWindowDialogAsync(m_Parent);
         }
 
         #endregion
@@ -145,25 +146,36 @@ namespace Zametek.View.ProjectPlan
         }
 
         public async Task<string?> ShowOpenFileDialogAsync(
-            string initialFilename,
             string initialDirectory,
             IList<IFileFilter> fileFilters)
         {
-            var dlg = new OpenFileDialog
-            {
-                AllowMultiple = false,
-                InitialFileName = initialFilename,
-                Directory = initialDirectory,
-                Filters = m_Mapper.Map<IList<IFileFilter>, List<FileDialogFilter>>(fileFilters)
-            };
+            var topLevel = TopLevel.GetTopLevel(m_Parent);
 
-            if (m_Parent is null)
+            if (topLevel is null)
             {
                 return null;
             }
 
-            string[]? files = await dlg.ShowAsync(m_Parent);
-            return files?.FirstOrDefault();
+            var filters = m_Mapper.Map<IList<IFileFilter>, List<FilePickerFileType>>(fileFilters);
+
+            var options = new FilePickerOpenOptions
+            {
+                AllowMultiple = false,
+                SuggestedStartLocation = await topLevel.StorageProvider.TryGetFolderFromPathAsync(initialDirectory),
+                FileTypeFilter = filters.AsReadOnlyList()
+            };
+
+            IReadOnlyList<IStorageFile> files = await topLevel.StorageProvider.OpenFilePickerAsync(options);
+
+            Uri? path = files?.FirstOrDefault()?.Path;
+
+            if (path is not null
+                && path.IsFile)
+            {
+                return path.LocalPath;
+            }
+
+            return null;
         }
 
         public async Task<string?> ShowSaveFileDialogAsync(
@@ -171,19 +183,33 @@ namespace Zametek.View.ProjectPlan
             string initialDirectory,
             IList<IFileFilter> fileFilters)
         {
-            var dlg = new SaveFileDialog
-            {
-                InitialFileName = initialFilename,
-                Directory = initialDirectory,
-                Filters = m_Mapper.Map<IList<IFileFilter>, List<FileDialogFilter>>(fileFilters)
-            };
+            var topLevel = TopLevel.GetTopLevel(m_Parent);
 
-            if (m_Parent is null)
+            if (topLevel is null)
             {
                 return null;
             }
 
-            return await dlg.ShowAsync(m_Parent);
+            var filters = m_Mapper.Map<IList<IFileFilter>, List<FilePickerFileType>>(fileFilters);
+
+            var options = new FilePickerSaveOptions
+            {
+                SuggestedFileName = initialFilename,
+                SuggestedStartLocation = await topLevel.StorageProvider.TryGetFolderFromPathAsync(initialDirectory),
+                FileTypeChoices = filters.AsReadOnlyList()
+            };
+
+            IStorageFile? file = await topLevel.StorageProvider.SaveFilePickerAsync(options);
+
+            Uri? path = file?.Path;
+
+            if (path is not null
+                && path.IsFile)
+            {
+                return path.LocalPath;
+            }
+
+            return null;
         }
 
         #endregion

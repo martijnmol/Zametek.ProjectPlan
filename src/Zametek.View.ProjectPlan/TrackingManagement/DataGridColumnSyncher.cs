@@ -2,8 +2,10 @@
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Data;
+using ReactiveUI;
 using System;
 using System.Collections;
+using System.Reactive.Linq;
 using Zametek.Contract.ProjectPlan;
 using Zametek.Utility;
 using Zametek.ViewModel.ProjectPlan;
@@ -15,10 +17,10 @@ namespace Zametek.View.ProjectPlan
     {
         static DataGridColumnSyncher()
         {
-            ItemsSourceProperty.Changed.Subscribe(x => HandleItemsSourceChanged(x.Sender, x.NewValue.GetValueOrDefault<IEnumerable?>()));
-            StartColumnIndexProperty.Changed.Subscribe(x => HandleStartColumnIndexChanged(x.Sender, x.NewValue.GetValueOrDefault<int?>()));
-            EndColumnIndexProperty.Changed.Subscribe(x => HandleEndColumnIndexChanged(x.Sender, x.NewValue.GetValueOrDefault<int?>()));
-            ColumnTypeProperty.Changed.Subscribe(x => HandleColumnTypeChanged(x.Sender, x.NewValue.GetValueOrDefault<Type?>()));
+            ItemsSourceProperty.Changed.ObserveOn(RxApp.MainThreadScheduler).Subscribe(x => HandleItemsSourceChanged(x.Sender, x.NewValue.GetValueOrDefault<IEnumerable?>()));
+            StartColumnIndexProperty.Changed.ObserveOn(RxApp.MainThreadScheduler).Subscribe(x => HandleStartColumnIndexChanged(x.Sender, x.NewValue.GetValueOrDefault<int?>()));
+            EndColumnIndexProperty.Changed.ObserveOn(RxApp.MainThreadScheduler).Subscribe(x => HandleEndColumnIndexChanged(x.Sender, x.NewValue.GetValueOrDefault<int?>()));
+            ColumnTypeProperty.Changed.ObserveOn(RxApp.MainThreadScheduler).Subscribe(x => HandleColumnTypeChanged(x.Sender, x.NewValue.GetValueOrDefault<Type?>()));
         }
 
 
@@ -36,7 +38,7 @@ namespace Zametek.View.ProjectPlan
             return element.GetValue(ItemsSourceProperty);
         }
 
-        private static void HandleItemsSourceChanged(IAvaloniaObject element, IEnumerable? newValue)
+        private static void HandleItemsSourceChanged(AvaloniaObject element, IEnumerable? newValue)
         {
             if (element is DataGrid dg)
             {
@@ -49,7 +51,7 @@ namespace Zametek.View.ProjectPlan
                 }
 
                 // Now set the Items value.
-                dg.Items = null;
+                dg.ItemsSource = null;
 
                 if (newValue is IEnumerable newItemsSource)
                 {
@@ -61,7 +63,7 @@ namespace Zametek.View.ProjectPlan
                     if (nextItemsSource is not null)
                     {
                         var dv = new DataGridCollectionView(nextItemsSource);
-                        dg.Items = dv;
+                        dg.ItemsSource = dv;
                         dv?.Refresh();
                     }
                 }
@@ -83,7 +85,7 @@ namespace Zametek.View.ProjectPlan
             return element.GetValue(StartColumnIndexProperty);
         }
 
-        private static void HandleStartColumnIndexChanged(IAvaloniaObject element, int? newValue)
+        private static void HandleStartColumnIndexChanged(AvaloniaObject element, int? newValue)
         {
             if (element is DataGrid dg)
             {
@@ -107,7 +109,7 @@ namespace Zametek.View.ProjectPlan
             return element.GetValue(EndColumnIndexProperty);
         }
 
-        private static void HandleEndColumnIndexChanged(IAvaloniaObject element, int? newValue)
+        private static void HandleEndColumnIndexChanged(AvaloniaObject element, int? newValue)
         {
             if (element is DataGrid dg)
             {
@@ -187,7 +189,7 @@ namespace Zametek.View.ProjectPlan
             return element.GetValue(ColumnTypeProperty);
         }
 
-        private static void HandleColumnTypeChanged(IAvaloniaObject element, Type? newValue)
+        private static void HandleColumnTypeChanged(AvaloniaObject element, Type? newValue)
         {
             // Check columnTypeValue is actually a DataGridColumn.
             if (newValue is not null
